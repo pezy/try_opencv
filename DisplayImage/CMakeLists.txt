@@ -1,0 +1,2 @@
+add_executable(DisplayImage main.cpp)
+target_link_libraries(DisplayImage ${OpenCV_LIBS})

@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.1)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 # Find OpenCV, you may need to set OpenCV_DIR variable to the absolute path to
 # the directory containing OpenCVConfig.cmake file via the command line or GUI
 find_package(OpenCV REQUIRED)
@@ -14,23 +17,25 @@ message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
-project(DisplayImage)
+project(TryOpenCV)
+
 include_directories(${OpenCV_INCLUDE_DIRS})
-add_executable(DisplayImage main.cpp)
-target_link_libraries(DisplayImage ${OpenCV_LIBS})
 
-function(copy_cv_runtime TARGET)
-  foreach(file_i ${ARGN})
-    set(source ${OpenCV_DIR}/${OpenCV_ARCH}/${OpenCV_RUNTIME}/bin/${file_i}.dll)
-    message(STATUS "${source} ==> ${CMAKE_BINARY_DIR}")
-    add_custom_command(TARGET DisplayImage POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${source}
-                               ${CMAKE_BINARY_DIR})
-  endforeach(file_i)
-endfunction()
+set(CV_DLL ${OpenCV_DIR}/${OpenCV_ARCH}/${OpenCV_RUNTIME}/bin)
+file(GLOB CV_RUNTIMES ${CV_DLL}/opencv_core310d.dll
+                ${CV_DLL}/opencv_highgui310d.dll
+                ${CV_DLL}/opencv_imgcodecs310d.dll
+                ${CV_DLL}/opencv_videoio310d.dll
+                ${CV_DLL}/opencv_imgproc310d.dll)
 
-copy_cv_runtime(opencv_core310d
-                opencv_highgui310d
-                opencv_imgcodecs310d
-                opencv_videoio310d
-                opencv_imgproc310d)
+add_custom_target(CopyRuntime)
+foreach(cv_runtime ${CV_RUNTIMES})
+  message(STATUS "Copy ${cv_runtime} ==> ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug")
+  add_custom_command(TARGET CopyRuntime PRE_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${cv_runtime}
+                               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug)
+endforeach()
+
+add_subdirectory(DisplayImage)
+add_subdirectory(ChangeImage)
+
